@@ -1,16 +1,23 @@
-import { PrismaClient, UserRole, PaymentMethod, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+type UserRole = "ADMIN" | "STAFF";
+type PaymentMethod = "CASH" | "CARD" | "BANK_TRANSFER" | "OTHER";
+
 async function main() {
+  const adminPassword = await bcrypt.hash("admin123", 10);
+  const staffPassword = await bcrypt.hash("staff123", 10);
+
   const admin = await prisma.user.upsert({
     where: { email: "admin@xenfi.com" },
     update: {},
     create: {
       email: "admin@xenfi.com",
-      password: "$2a$10$example",
+      password: adminPassword,
       name: "Admin User",
-      role: UserRole.ADMIN,
+      role: "ADMIN" as UserRole,
     },
   });
 
@@ -19,9 +26,9 @@ async function main() {
     update: {},
     create: {
       email: "staff@xenfi.com",
-      password: "$2a$10$example",
+      password: staffPassword,
       name: "Staff User",
-      role: UserRole.STAFF,
+      role: "STAFF" as UserRole,
     },
   });
 
@@ -61,19 +68,19 @@ async function main() {
   ]);
 
   const expenses = [];
-  const paymentMethods = [
-    PaymentMethod.CASH,
-    PaymentMethod.CARD,
-    PaymentMethod.BANK_TRANSFER,
-    PaymentMethod.OTHER,
+  const paymentMethods: PaymentMethod[] = [
+    "CASH",
+    "CARD",
+    "BANK_TRANSFER",
+    "OTHER",
   ];
   const userIds = [admin.id, staff.id];
-  const categoryIds = categories.map((cat) => cat.id);
+  const categoryIds = categories.map((cat: { id: string }) => cat.id);
 
   for (let i = 0; i < 10; i++) {
     const expense = await prisma.expense.create({
       data: {
-        amount: new Prisma.Decimal((Math.random() * 1000 + 10).toFixed(2)),
+        amount: (Math.random() * 1000 + 10).toFixed(2),
         description: `Expense ${i + 1}`,
         date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
         paymentMethod:
